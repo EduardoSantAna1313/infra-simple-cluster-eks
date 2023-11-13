@@ -1,6 +1,6 @@
 # infra-simple-cluster-eks
 
-Cluster EKS em terraform com configuração minima.
+Cluster EKS em terraform com configuração minima utilizando o módulo [terraform-aws-modules](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest)
 
 Pipeline com github actions. Necessário setar as variaveis:
 
