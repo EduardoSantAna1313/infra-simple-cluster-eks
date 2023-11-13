@@ -57,9 +57,9 @@ jobs:
             -backend-config="key=$REPOSITORY_NAME/terraform.tfstate" \
             -backend-config="region=$AWS_REGION" 
 
-            - name: Terraform validate
-            working-directory: infra
-            run: terraform validate
+      - name: Terraform validate
+        working-directory: infra
+        run: terraform validate
           
       - name: Check destroy
         id: destroy_check
