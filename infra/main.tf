@@ -10,7 +10,7 @@ module "eks" {
   vpc_id                         = module.vpc.vpc_id
   subnet_ids                     = module.vpc.private_subnets
   cluster_endpoint_public_access = true
-  create_kms_key                 = false
+  create_kms_key                 = true
 
   cluster_addons = {
     coredns = {
@@ -44,7 +44,7 @@ module "eks" {
   }
 
   eks_managed_node_groups = {
-    one = {
+    business = {
       name = "node-group-business"
 
       instance_types = [var.instance_type]
@@ -53,16 +53,5 @@ module "eks" {
       max_size     = var.max_instances
       desired_size = var.desired_size
     }
-
-    /*
-    two = {
-      name = "node-group-2"
-
-      instance_types = [var.instance_type]
-
-      min_size     = 1
-      max_size     = var.max_instances
-      desired_size = var.desired_size
-    }*/
   }
 }

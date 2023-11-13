@@ -57,17 +57,39 @@ jobs:
             -backend-config="key=$REPOSITORY_NAME/terraform.tfstate" \
             -backend-config="region=$AWS_REGION" 
 
-      - name: Terraform Plan
+            - name: Terraform validate
+            working-directory: infra
+            run: terraform validate
+          
+      - name: Check destroy
+        id: destroy_check
         working-directory: infra
         run: |
-          terraform plan \
-            -var "aws_region=$AWS_REGION"
+          if [[ $(cat destroy | grep "destroy=true" | wc -l) == 1 ]] ; then
+            echo "destroy=true" >> $GITHUB_OUTPUT
+          else
+            echo "destroy=false" >> $GITHUB_OUTPUT
+          fi
+  
+      - name: Terraform Plan Create
+        if: steps.destroy_check.outputs.destroy == 'false'
+        working-directory: infra
+        run: terraform plan -var-file=terraform.tfvars
+
+      - name: Terraform Plan Destroy
+        if: steps.destroy_check.outputs.destroy == 'true'
+        working-directory: infra
+        run: terraform plan -destroy -var-file=terraform.tfvars
 
       - name: Set Terraform Log Level
         run: echo "TF_LOG=INFO" >> $GITHUB_ENV
 
-      - name: Terraform Apply
+      - name: Terraform Destroy
+        if: steps.destroy_check.outputs.destroy == 'true'
         working-directory: infra
-        run: |
-          terraform apply -auto-approve \
-            -var "aws_region=$AWS_REGION"
+        run: terraform destroy -auto-approve -var-file=terraform.tfvars
+
+      - name: Terraform Apply
+        if: steps.destroy_check.outputs.destroy == 'false'
+        working-directory: infra
+        run: terraform apply -auto-approve  -var-file=terraform.tfvars
