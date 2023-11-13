@@ -1,0 +1,73 @@
+name: 'Develop'
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  BUCKET_STATE: ${{ vars.BUCKET_STATE }}
+  AWS_ASSUME_ROLE: ${{ vars.AWS_ASSUME_ROLE }}
+  REPOSITORY_NAME: ${{ github.event.repository.name }}
+
+jobs:
+
+  # Infraestructure
+  terraform:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+
+      # Configure aws credentials with assumerole
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ env.AWS_ASSUME_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github_actions_oidc_role
+
+      # Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      
+      # Crete backend file
+      - name: Terraform set backend
+        working-directory: infra
+        run: |
+          cat <<EOT >> backend.tf
+          terraform {
+            backend "s3" {
+            }
+          }
+          EOT
+
+      # Terraform init config with bucket on S3 with the repo name
+      - name: Terraform Init
+        working-directory: infra
+        run: |
+          terraform init \
+             -backend=true \
+            -backend-config="bucket=$BUCKET_STATE" \
+            -backend-config="key=$REPOSITORY_NAME/terraform.tfstate" \
+            -backend-config="region=$AWS_REGION" 
+
+      - name: Terraform Plan
+        working-directory: infra
+        run: |
+          terraform plan \
+            -var "aws_region=$AWS_REGION"
+
+      - name: Set Terraform Log Level
+        run: echo "TF_LOG=INFO" >> $GITHUB_ENV
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: |
+          terraform apply -auto-approve \
+            -var "aws_region=$AWS_REGION"
